@@ -152,8 +152,10 @@ npm install react-router-dom @microsoft/signalr
 
 Add dev/test packages:
 ```powershell
-npm install -D jest ts-jest @types/jest @testing-library/react @testing-library/jest-dom @testing-library/user-event jest-environment-jsdom identity-obj-proxy
+npm install -D jest ts-jest @types/jest @testing-library/react @testing-library/jest-dom @testing-library/user-event jest-environment-jsdom identity-obj-proxy ts-node
 ```
+
+> **Note**: `ts-node` is required for Jest to load `.ts` config files.
 
 #### 1.4 — Configure Vite proxy
 
@@ -224,15 +226,19 @@ app.UseCors();
 
 Create `jest.config.ts` in the `frontend/` root:
 ```typescript
+/** @jest-config-loader ts-node */
+/** @jest-config-loader-options {"transpileOnly": true} */
 export default {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   moduleNameMapper: {
     '\\.(css|less|scss)$': 'identity-obj-proxy'  // mock CSS imports
   },
-  setupFilesAfterSetup: ['@testing-library/jest-dom']
+  setupFilesAfterEnv: ['@testing-library/jest-dom']
 }
 ```
+
+> **Note**: The `@jest-config-loader` docblocks are required because the Vite project uses `"type": "module"` in `package.json`. The correct Jest key is `setupFilesAfterEnv` (not `setupFilesAfterSetup`).
 
 Add to `package.json` scripts: `"test": "jest"`
 
@@ -241,7 +247,8 @@ Add to `package.json` scripts: `"test": "jest"`
 - [ ] `cd backend/PollApp.Api && dotnet build` — succeeds with no errors
 - [ ] `cd backend/PollApp.Api && dotnet run` — starts on `https://localhost:5001`
 - [ ] `cd frontend && npm run dev` — starts on `http://localhost:5173`, shows default Vite+React page
-- [ ] `cd frontend && npm test -- --passWithNoTests` — Jest runs (no tests yet, exits 0)
+- [ ] `cd frontend && npx jest --passWithNoTests` — Jest runs (no tests yet, exits 0)
+  > **Note**: `npm test -- --passWithNoTests` does not work with npm 11.x. Use `npx jest` directly.
 - [ ] `start.cmd` from repo root launches both
 
 ---
