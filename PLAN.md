@@ -253,6 +253,31 @@ Add to `package.json` scripts: `"test": "jest"`
 
 ---
 
+## Phase 1.a: CI Pipeline (GitHub Actions)
+
+**Goal**: Add a minimal GitHub Actions CI workflow so that every push to `main` and every pull request is automatically built and tested.
+
+**Prerequisites**: Phase 1 complete (backend builds, frontend builds, Jest configured).
+
+### Steps
+
+#### 1.a.1 — Create `.github/workflows/ci.yml`
+
+Two parallel jobs:
+
+1. **Build & Test .NET** — `ubuntu-latest`, .NET 9.0.x
+   - `dotnet restore` → `dotnet build --no-restore` → `dotnet test --no-build`
+2. **Build & Test Frontend** — `ubuntu-latest`, Node 22.x, `working-directory: ./frontend`
+   - `npm ci` → `npm run build` → `npx jest --passWithNoTests`
+
+#### 1.a.2 — Verification
+
+- [ ] YAML is valid and uses pinned action versions (`actions/checkout@v4`, etc.)
+- [ ] Push to `main` or open a PR triggers both jobs
+- [ ] Both jobs pass green (no tests yet — `dotnet test` finds nothing, Jest uses `--passWithNoTests`)
+
+---
+
 ## Phase 2: Data Model & Database (Dapper + FluentMigrator)
 
 **Goal**: Define all database tables via FluentMigrator migrations, create plain C# entity classes, implement repository interfaces and Dapper-backed implementations, and verify migrations run on startup.
