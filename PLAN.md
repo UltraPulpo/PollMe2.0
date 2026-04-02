@@ -295,7 +295,9 @@ Two parallel jobs:
 
 #### 2.1 — Entity classes
 
-Create plain C# POCOs in `Entities/`. No attributes, no base classes — just properties whose names match database column names (Dapper maps by convention):
+Create plain C# POCOs in `Entities/`. No attributes, no base classes — just properties whose names match database column names (Dapper maps by convention).
+
+> **SQLite + Dapper note**: SQLite stores GUIDs as TEXT and has no native boolean type. You must register a custom `GuidTypeHandler` (a `SqlMapper.TypeHandler<Guid>`) at startup so Dapper can map between C# `Guid` properties and SQLite TEXT columns. Call `SqlMapper.AddTypeHandler(new GuidTypeHandler())` before building the app. In INSERT/UPDATE statements, pass Guid values via `.ToString()`, DateTime values via `.ToString("O")` (ISO 8601), and boolean values as `1`/`0`.
 
 ```csharp
 // Entities/Poll.cs
@@ -433,6 +435,11 @@ public class PollRepository : IPollRepository
 }
 ```
 
+Additional files to create in `Repositories/`:
+- **`GuidTypeHandler`** — `SqlMapper.TypeHandler<Guid>` that converts between C# `Guid` and SQLite TEXT (see note in §2.1)
+- **`PollOptionResult`** — a small projection class with `PollOptionId`, `Text`, `VoteCount` for `GetResultsAsync` results (this doesn't map to a single entity, so it lives alongside `IVoteRepository`)
+```
+
 #### 2.5 — Register repositories in DI
 
 In `Program.cs`:
@@ -448,6 +455,10 @@ builder.Services.AddScoped<ICreatorRepository, CreatorRepository>();
 - [ ] `dotnet run` starts and creates `polls.db` file with all 5 tables
 - [ ] Inspect `polls.db` with a SQLite browser or `sqlite3 polls.db ".tables"` — all tables present
 - [ ] Unique index on `Votes(PollId, VoterToken)` exists
+
+> **Note**: `polls.db` is created relative to the working directory (i.e., `backend/PollApp.Api/`). Ensure it is listed in `.gitignore`.
+>
+> **Note**: SQLite does not enforce foreign keys by default — it requires `PRAGMA foreign_keys = ON` per connection. The repository `DeleteAsync` methods handle cascade deletes manually in FK order within a transaction. A future improvement could enable FK enforcement via a connection interceptor.
 
 ---
 
