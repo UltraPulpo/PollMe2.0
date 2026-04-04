@@ -1,4 +1,20 @@
+using Dapper;
+using FluentMigrator.Runner;
+using PollApp.Api.Repositories;
+
+// Register Dapper type handler for Guid ↔ SQLite TEXT conversion
+SqlMapper.AddTypeHandler(new GuidTypeHandler());
+
 var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    // Fallback to a local SQLite database if no connection string is configured.
+    // This prevents unexpected crashes when running via CLI without appsettings.
+    connectionString = "Data Source=pollapp.db;Cache=Shared;";
+    Console.WriteLine("Warning: Connection string 'DefaultConnection' not found. Using fallback SQLite database 'pollapp.db'.");
+}
 
 builder.Services.AddControllers();
 
@@ -13,7 +29,27 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Register FluentMigrator — scans this assembly for Migration classes
+builder.Services.AddFluentMigratorCore()
+    .ConfigureRunner(rb => rb
+        .AddSQLite()
+        .WithGlobalConnectionString(connectionString)
+        .ScanIn(typeof(Program).Assembly).For.Migrations())
+    .AddLogging(lb => lb.AddFluentMigratorConsole());
+
+// Register repositories
+builder.Services.AddScoped<IPollRepository, PollRepository>();
+builder.Services.AddScoped<IVoteRepository, VoteRepository>();
+builder.Services.AddScoped<ICreatorRepository, CreatorRepository>();
+
 var app = builder.Build();
+
+// Run all pending migrations automatically on startup
+using (var scope = app.Services.CreateScope())
+{
+    var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
+    runner.MigrateUp();
+}
 
 app.UseCors();
 
