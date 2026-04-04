@@ -406,6 +406,7 @@ Create in `Repositories/`:
 - `CreateVoteAsync(Vote vote, List<VoteChoice> choices)` — INSERT vote + choices in a transaction
 - `HasVotedAsync(Guid pollId, string voterToken)` — SELECT EXISTS with the unique index
 - `GetResultsAsync(Guid pollId)` — SELECT option text, vote count GROUP BY option
+- `GetVoteCountAsync(Guid pollId)` — SELECT COUNT of votes for a poll (added in Phase 4 for CreatorPollSummary)
 
 **`ICreatorRepository`** / **`CreatorRepository`**:
 - `CreateAsync(Creator creator)` — INSERT creator
@@ -638,7 +639,7 @@ DTOs to create:
 |--------|-------|------|----------|
 | POST | `/api/polls` | Auto-creates creator | Validate request → resolve/create creator from cookie → create poll + options → return `CreatePollResponse` with secretToken and links |
 | GET | `/api/polls/{pollId}` | None | Fetch poll + options → return `PollResponse`. 404 if not found |
-| POST | `/api/polls/{pollId}/vote` | None | Get/create voter token cookie → check if already voted (409 if yes) → validate optionIds (single-choice: exactly 1, multi: ≥1, all must belong to poll) → save vote + choices → broadcast results via SignalR → return 204 |
+| POST | `/api/polls/{pollId}/vote` | None | Get/create voter token cookie → check if already voted (409 if yes) → validate optionIds (single-choice: exactly 1, multi: ≥1, all must belong to poll) → save vote + choices → return 204. (SignalR broadcast added in Phase 5) |
 | GET | `/api/polls/{pollId}/results` | None | Fetch aggregated results → return `PollResultsResponse` |
 | PATCH | `/api/polls/{pollId}` | `[CreatorRequired]` | Toggle `IsActive` → return updated poll. Verify the creator owns this poll (403 if not) |
 | DELETE | `/api/polls/{pollId}` | `[CreatorRequired]` | Delete poll + cascade → return 204. Verify ownership (403 if not) |
@@ -650,6 +651,23 @@ DTOs to create:
 | GET | `/api/creator/{secretToken}/polls` | Magic link (secretToken in route) | Look up creator by secretToken (404 if not found) → fetch all polls with summary vote counts → return `List<CreatorPollSummary>` |
 
 #### 4.4 — Error responses
+
+Register ProblemDetails services and middleware in `Program.cs`:
+```csharp
+builder.Services.AddProblemDetails();
+// ...
+app.UseExceptionHandler();
+app.UseStatusCodePages();
+```
+
+Also add `JsonStringEnumConverter` so `PollType` serializes as `"SingleChoice"`/`"MultipleChoice"` strings rather than `0`/`1`:
+```csharp
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+```
 
 Use ASP.NET Core's built-in `ProblemDetails` for all error responses:
 ```csharp

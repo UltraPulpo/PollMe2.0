@@ -76,4 +76,12 @@ public class VoteRepository : IVoteRepository
             new { PollId = pollId });
         return results.ToList();
     }
+
+    public async Task<int> GetVoteCountAsync(Guid pollId)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        return await connection.ExecuteScalarAsync<int>(
+            "SELECT COUNT(1) FROM Votes WHERE PollId = @PollId",
+            new { PollId = pollId });
+    }
 }
