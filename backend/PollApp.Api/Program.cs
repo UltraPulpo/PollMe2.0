@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Dapper;
 using FluentMigrator.Runner;
 using PollApp.Api.Repositories;
@@ -17,7 +18,13 @@ if (string.IsNullOrWhiteSpace(connectionString))
     Console.WriteLine("Warning: Connection string 'DefaultConnection' not found. Using fallback SQLite database 'pollapp.db'.");
 }
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+
+builder.Services.AddProblemDetails();
 
 builder.Services.AddCors(options =>
 {
@@ -54,6 +61,9 @@ using (var scope = app.Services.CreateScope())
     var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
     runner.MigrateUp();
 }
+
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 app.UseCors();
 
