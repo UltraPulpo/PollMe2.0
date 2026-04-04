@@ -7,8 +7,14 @@ SqlMapper.AddTypeHandler(new GuidTypeHandler());
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    // Fallback to a local SQLite database if no connection string is configured.
+    // This prevents unexpected crashes when running via CLI without appsettings.
+    connectionString = "Data Source=pollapp.db;Cache=Shared;";
+    Console.WriteLine("Warning: Connection string 'DefaultConnection' not found. Using fallback SQLite database 'pollapp.db'.");
+}
 
 builder.Services.AddControllers();
 
