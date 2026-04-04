@@ -749,13 +749,33 @@ app.MapHub<PollHub>("/hubs/poll");
 
 In `PollsController`, inject `IHubContext<PollHub>`:
 ```csharp
-// After saving the vote:
+// After saving the vote, build a full PollResultsResponse and broadcast it.
+// This sends the same JSON shape as GET /api/polls/{id}/results, so the
+// frontend SignalR handler can directly replace its results state.
 var results = await _voteRepository.GetResultsAsync(pollId);
+var totalVotes = results.Sum(o => o.VoteCount);
+var broadcastPayload = new PollResultsResponse
+{
+    PollId = pollId,
+    Title = poll.Title,
+    TotalVotes = totalVotes,
+    Options = results.Select(o => new PollOptionResultResponse
+    {
+        Id = o.PollOptionId,
+        Text = o.Text,
+        VoteCount = o.VoteCount,
+        Percentage = totalVotes > 0
+            ? Math.Round((double)o.VoteCount / totalVotes * 100, 1)
+            : 0
+    }).ToList()
+};
 await _hubContext.Clients.Group(pollId.ToString())
-    .SendAsync("ResultsUpdated", results);
+    .SendAsync("ResultsUpdated", broadcastPayload);
 ```
 
 **Key concept**: `IHubContext<PollHub>` lets you send SignalR messages from *outside* the hub class. This is the standard pattern — the hub handles connections, but business logic triggers broadcasts from services/controllers.
+
+> **Note**: The broadcast payload is a full `PollResultsResponse` DTO (not the raw `PollOptionResult` list). This ensures the SignalR event delivers the same JSON shape as the REST endpoint, so the frontend `useSignalR` hook can set state directly without transformation.
 
 #### 5.4 — Verification
 

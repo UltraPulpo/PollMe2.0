@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using PollApp.Api.DTOs;
 using PollApp.Api.Entities;
 using PollApp.Api.Filters;
 using PollApp.Api.Helpers;
+using PollApp.Api.Hubs;
 using PollApp.Api.Repositories;
 using PollApp.Api.Services;
 
@@ -15,15 +17,18 @@ public class PollsController : ControllerBase
     private readonly IPollRepository _pollRepository;
     private readonly IVoteRepository _voteRepository;
     private readonly ICreatorAuthService _creatorAuthService;
+    private readonly IHubContext<PollHub> _hubContext;
 
     public PollsController(
         IPollRepository pollRepository,
         IVoteRepository voteRepository,
-        ICreatorAuthService creatorAuthService)
+        ICreatorAuthService creatorAuthService,
+        IHubContext<PollHub> hubContext)
     {
         _pollRepository = pollRepository;
         _voteRepository = voteRepository;
         _creatorAuthService = creatorAuthService;
+        _hubContext = hubContext;
     }
 
     // POST /api/polls — Create a new poll (auto-creates creator if needed)
@@ -171,7 +176,26 @@ public class PollsController : ControllerBase
 
         await _voteRepository.CreateVoteAsync(vote, choices);
 
-        // SignalR broadcast will be added in Phase 5
+        // Broadcast updated results to all clients viewing this poll's results page
+        var results = await _voteRepository.GetResultsAsync(pollId);
+        var totalVotes = results.Sum(o => o.VoteCount);
+        var broadcastPayload = new PollResultsResponse
+        {
+            PollId = pollId,
+            Title = poll.Title,
+            TotalVotes = totalVotes,
+            Options = results.Select(o => new PollOptionResultResponse
+            {
+                Id = o.PollOptionId,
+                Text = o.Text,
+                VoteCount = o.VoteCount,
+                Percentage = totalVotes > 0
+                    ? Math.Round((double)o.VoteCount / totalVotes * 100, 1)
+                    : 0
+            }).ToList()
+        };
+        await _hubContext.Clients.Group(pollId.ToString())
+            .SendAsync("ResultsUpdated", broadcastPayload);
 
         return NoContent();
     }

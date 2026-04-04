@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Dapper;
 using FluentMigrator.Runner;
+using PollApp.Api.Hubs;
 using PollApp.Api.Repositories;
 using PollApp.Api.Services;
 
@@ -53,6 +54,9 @@ builder.Services.AddScoped<ICreatorRepository, CreatorRepository>();
 // Register services
 builder.Services.AddScoped<ICreatorAuthService, CreatorAuthService>();
 
+// Register SignalR for real-time updates
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 // Run all pending migrations automatically on startup
@@ -70,5 +74,8 @@ app.UseCors();
 app.MapGet("/", () => Results.Ok(new { status = "healthy" }));
 
 app.MapControllers();
+
+// Map SignalR hub endpoint — clients connect via /hubs/poll
+app.MapHub<PollHub>("/hubs/poll");
 
 app.Run();
