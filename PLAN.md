@@ -438,7 +438,7 @@ public class PollRepository : IPollRepository
 Additional files to create in `Repositories/`:
 - **`GuidTypeHandler`** — `SqlMapper.TypeHandler<Guid>` that converts between C# `Guid` and SQLite TEXT (see note in §2.1)
 - **`PollOptionResult`** — a small projection class with `PollOptionId`, `Text`, `VoteCount` for `GetResultsAsync` results (this doesn't map to a single entity, so it lives alongside `IVoteRepository`)
-```
+
 
 #### 2.5 — Register repositories in DI
 

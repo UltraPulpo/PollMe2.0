@@ -1,6 +1,7 @@
 using Dapper;
 using FluentMigrator.Runner;
 using PollApp.Api.Repositories;
+using PollApp.Api.Services;
 
 // Register Dapper type handler for Guid ↔ SQLite TEXT conversion
 SqlMapper.AddTypeHandler(new GuidTypeHandler());
@@ -41,6 +42,9 @@ builder.Services.AddFluentMigratorCore()
 builder.Services.AddScoped<IPollRepository, PollRepository>();
 builder.Services.AddScoped<IVoteRepository, VoteRepository>();
 builder.Services.AddScoped<ICreatorRepository, CreatorRepository>();
+
+// Register services
+builder.Services.AddScoped<ICreatorAuthService, CreatorAuthService>();
 
 var app = builder.Build();
 
