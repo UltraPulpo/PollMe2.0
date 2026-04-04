@@ -297,7 +297,7 @@ Two parallel jobs:
 
 Create plain C# POCOs in `Entities/`. No attributes, no base classes — just properties whose names match database column names (Dapper maps by convention).
 
-> **SQLite + Dapper note**: SQLite stores GUIDs as TEXT and has no native boolean type. You must register a custom `GuidTypeHandler` (a `SqlMapper.TypeHandler<Guid>`) at startup so Dapper can map between C# `Guid` properties and SQLite TEXT columns. Call `SqlMapper.AddTypeHandler(new GuidTypeHandler())` before building the app. In INSERT/UPDATE statements, pass Guid values via `.ToString()`, DateTime values via `.ToString("O")` (ISO 8601), and boolean values as `1`/`0`.
+> **SQLite + Dapper note**: SQLite stores GUIDs as TEXT and has no native boolean type. You must register a custom `GuidTypeHandler` (a `SqlMapper.TypeHandler<Guid>`) at startup so Dapper can map between C# `Guid` properties and SQLite TEXT columns. Call `SqlMapper.AddTypeHandler(new GuidTypeHandler())` before building the app. With this handler in place, pass `Guid` parameters directly in INSERT/UPDATE statements and let Dapper bind them as TEXT. Continue to pass `DateTime` values via `.ToString("O")` (ISO 8601) and boolean values as `1`/`0`.
 
 ```csharp
 // Entities/Poll.cs

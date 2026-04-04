@@ -42,7 +42,7 @@
 - **Added `GuidTypeHandler`**: The plan doesn't mention a Dapper type handler, but SQLite stores GUIDs as TEXT strings. Without it, Dapper cannot map between C# `Guid` properties and SQLite TEXT columns. This is a standard Dapper pattern for SQLite.
 - **Added `PollOptionResult` class**: The plan's `IVoteRepository.GetResultsAsync` returns aggregated results (option text + vote count). Created a `PollOptionResult` class to hold this projection since it doesn't map to any single entity. Defined alongside the `IVoteRepository` interface.
 - **Repository constructor uses `IConfiguration`**: The plan example shows `PollRepository(IConfiguration config)` which is what was implemented. The connection string is read from `IConfiguration` in each repository rather than injected as a raw string.
-- **Guid parameters serialized explicitly in SQL**: In `INSERT` statements, Guid values are passed as `.ToString()` in anonymous parameter objects to ensure Dapper sends them as TEXT to SQLite. DateTime values are formatted as ISO 8601 strings via `.ToString("O")`.
+- **Guid parameters handled via `GuidTypeHandler`**: Repository methods pass `Guid` values directly in parameter objects; the custom Dapper `GuidTypeHandler` converts them to/from SQLite `TEXT` columns. DateTime values are formatted as ISO 8601 strings via `.ToString("O")`.
 - **Boolean values passed as integers**: SQLite has no native boolean type, so `IsActive` is passed as `1`/`0` in INSERT/UPDATE statements.
 
 ### Known Issues / Technical Debt
