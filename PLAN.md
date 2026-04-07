@@ -190,13 +190,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://localhost:5001',
-        secure: false,       // accept self-signed certs from ASP.NET Core dev server
+        target: 'http://localhost:5006',
         changeOrigin: true
       },
       '/hubs': {
-        target: 'https://localhost:5001',
-        secure: false,
+        target: 'http://localhost:5006',
         ws: true             // enable WebSocket proxying — required for SignalR
       }
     }
@@ -828,7 +826,7 @@ import VotePage from './pages/VotePage';
 import ResultsPage from './pages/ResultsPage';
 import Dashboard from './pages/Dashboard';
 
-// React Router v6 — declarative route definitions.
+// React Router v7 — declarative route definitions.
 // Each <Route> maps a URL pattern to a page component.
 // :pollId and :secretToken are URL parameters — extracted via useParams() in the page.
 function App() {
@@ -856,7 +854,24 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 );
 ```
 
-#### 6.2 — API client (`src/api.ts`)
+#### 6.2 — TypeScript types (`src/types.ts`)
+
+Create a `types.ts` file with TypeScript interfaces matching all backend DTOs. Use string literal union for `PollType` instead of an enum because the Vite project's `tsconfig.app.json` has `erasableSyntaxOnly: true` (enums emit JavaScript and are not "erasable"). The backend serializes `PollType` as strings via `JsonStringEnumConverter`, so string literals match directly:
+
+```typescript
+export type PollType = 'SingleChoice' | 'MultipleChoice';
+
+export interface CreatePollRequest { ... }
+export interface CreatePollResponse { ... }
+export interface PollResponse { ... }
+export interface VoteRequest { ... }
+export interface PollResultsResponse { ... }
+export interface CreatorPollSummary { ... }
+```
+
+> **Note**: `erasableSyntaxOnly: true` also forbids constructor parameter properties (e.g., `constructor(public x: number)`). Declare class properties explicitly and assign in the constructor body instead.
+
+#### 6.3 — API client (`src/api.ts`)
 
 A thin typed wrapper over `fetch`. Vite's proxy forwards `/api/*` to the backend, so we use relative URLs:
 
@@ -864,9 +879,13 @@ A thin typed wrapper over `fetch`. Vite's proxy forwards `/api/*` to the backend
 // api.ts — every API function is a simple async function.
 // No axios, no complex abstractions — just fetch with types.
 
+// Note: Using explicit property instead of constructor parameter property
+// because tsconfig has erasableSyntaxOnly: true
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  status: number;
+  constructor(status: number, message: string) {
     super(message);
+    this.status = status;
   }
 }
 
@@ -891,7 +910,7 @@ export const createPoll = (data: CreatePollRequest) =>
 // ... similar functions for other endpoints
 ```
 
-#### 6.3 — SignalR hook (`src/hooks/useSignalR.ts`)
+#### 6.4 — SignalR hook (`src/hooks/useSignalR.ts`)
 
 ```typescript
 // Custom hook that manages a SignalR connection for a specific poll.
@@ -899,7 +918,7 @@ export const createPoll = (data: CreatePollRequest) =>
 import { useEffect, useRef } from 'react';
 import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr';
 
-export function useSignalR(pollId: string, onResultsUpdated: (results: PollResults) => void) {
+export function useSignalR(pollId: string, onResultsUpdated: (results: PollResultsResponse) => void) {
   const connectionRef = useRef<HubConnection | null>(null);
 
   useEffect(() => {
@@ -912,7 +931,7 @@ export function useSignalR(pollId: string, onResultsUpdated: (results: PollResul
     connectionRef.current = connection;
 
     // Register the event handler BEFORE starting the connection
-    connection.on('ResultsUpdated', (results: PollResults) => {
+    connection.on('ResultsUpdated', (results: PollResultsResponse) => {
       onResultsUpdated(results);
     });
 
@@ -931,7 +950,7 @@ export function useSignalR(pollId: string, onResultsUpdated: (results: PollResul
 }
 ```
 
-#### 6.4 — Create Poll page (`src/pages/CreatePoll.tsx`)
+#### 6.5 — Create Poll page (`src/pages/CreatePoll.tsx`)
 
 - Controlled form with `useState` for every field
 - Dynamic options list: `useState<string[]>(['', ''])` (start with 2 empty options)
@@ -940,7 +959,7 @@ export function useSignalR(pollId: string, onResultsUpdated: (results: PollResul
 - On submit: call `createPoll()`, on success show shareable links with copy-to-clipboard
 - Error display for validation failures
 
-#### 6.5 — Vote page (`src/pages/VotePage.tsx`)
+#### 6.6 — Vote page (`src/pages/VotePage.tsx`)
 
 - `useParams()` to get `pollId` from URL
 - `useEffect` to fetch poll on mount
@@ -951,7 +970,7 @@ export function useSignalR(pollId: string, onResultsUpdated: (results: PollResul
 - Handle 404: show "poll not found"
 - Loading state while fetching
 
-#### 6.6 — Results page (`src/pages/ResultsPage.tsx`)
+#### 6.7 — Results page (`src/pages/ResultsPage.tsx`)
 
 - `useEffect` #1: fetch initial results
 - `useSignalR(pollId, setResults)` for live updates
@@ -959,7 +978,7 @@ export function useSignalR(pollId: string, onResultsUpdated: (results: PollResul
 - Display: option text, vote count, percentage, total votes
 - Shareable vote link with copy button
 
-#### 6.7 — Creator Dashboard (`src/pages/Dashboard.tsx`)
+#### 6.8 — Creator Dashboard (`src/pages/Dashboard.tsx`)
 
 - `useParams()` to get `secretToken`
 - Fetch polls via `getCreatorPolls(secretToken)`
@@ -967,13 +986,13 @@ export function useSignalR(pollId: string, onResultsUpdated: (results: PollResul
 - Action buttons per poll: view results, copy vote link, toggle active, delete (with confirmation)
 - "Create New Poll" link to `/`
 
-#### 6.8 — Shared components
+#### 6.9 — Shared components
 
 - `CopyLinkButton` — takes a URL, copies to clipboard, shows "Copied!" feedback
 - `ResultsBar` — single row of the results chart (option text + bar + count)
 - `OptionsList` — dynamic add/remove text inputs for poll options
 
-#### 6.9 — Pico CSS
+#### 6.10 — Pico CSS
 
 Add Pico CSS for clean default styling. Install via npm or add CDN link in `index.html`:
 ```html
@@ -981,7 +1000,7 @@ Add Pico CSS for clean default styling. Install via npm or add CDN link in `inde
 ```
 Pico is a classless framework — semantic HTML (`<article>`, `<button>`, `<input>`, `<table>`) looks good with zero CSS classes.
 
-#### 6.10 — Verification
+#### 6.11 — Verification
 
 - [ ] `npm run dev` starts without errors
 - [ ] `npm run build` completes with no TypeScript errors
