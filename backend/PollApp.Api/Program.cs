@@ -16,8 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Ensure a shared fallback connection string is available to all consumers
 // of IConfiguration, not just FluentMigrator.
-var defaultConnection = builder.Configuration.GetConnectionString("DefaultConnection");
-var usingFallbackConnection = string.IsNullOrWhiteSpace(defaultConnection);
+var usingFallbackConnection = string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("DefaultConnection"));
 if (usingFallbackConnection)
 {
     builder.Configuration["ConnectionStrings:DefaultConnection"] = "Data Source=pollapp.db;Cache=Shared;";
