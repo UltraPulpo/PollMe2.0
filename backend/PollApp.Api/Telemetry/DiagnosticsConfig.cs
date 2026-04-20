@@ -17,5 +17,6 @@ public static class DiagnosticsConfig
     public static readonly Meter Meter = new(ServiceName);
 
     // Custom counter: how many votes have been cast total?
-    public static readonly Counter<long> VoteCounter = Meter.CreateCounter<long>("pollapp.votes.count");
+    public static readonly Counter<long> VoteCounter =
+        Meter.CreateCounter<long>("pollapp.votes.count", "votes", "Total number of votes cast.");
 }

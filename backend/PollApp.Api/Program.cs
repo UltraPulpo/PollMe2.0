@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Dapper;
 using FluentMigrator.Runner;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using PollApp.Api.Hubs;
 using PollApp.Api.Repositories;
@@ -62,15 +63,30 @@ builder.Services.AddSignalR();
 
 // Configure OpenTelemetry tracing and metrics
 builder.Services.AddOpenTelemetry()
-    .WithTracing(tracing => tracing
-        .AddSource(DiagnosticsConfig.ServiceName)   // listen to our custom ActivitySource
-        .AddAspNetCoreInstrumentation()             // auto-trace every HTTP request
-        .AddHttpClientInstrumentation()             // auto-trace outgoing HTTP calls (if any)
-        .AddConsoleExporter())                      // print traces to console for local dev
-    .WithMetrics(metrics => metrics
-        .AddMeter(DiagnosticsConfig.ServiceName)    // listen to our custom Meter
-        .AddAspNetCoreInstrumentation()             // auto-collect HTTP metrics
-        .AddConsoleExporter());                     // print metrics to console
+    .ConfigureResource(resource => resource.AddService(DiagnosticsConfig.ServiceName))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddSource(DiagnosticsConfig.ServiceName)   // listen to our custom ActivitySource
+            .AddAspNetCoreInstrumentation()             // auto-trace every HTTP request
+            .AddHttpClientInstrumentation();            // auto-trace outgoing HTTP calls (if any)
+
+        if (builder.Environment.IsDevelopment())
+        {
+            tracing.AddConsoleExporter();               // print traces to console for local dev
+        }
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddMeter(DiagnosticsConfig.ServiceName)    // listen to our custom Meter
+            .AddAspNetCoreInstrumentation();            // auto-collect HTTP metrics
+
+        if (builder.Environment.IsDevelopment())
+        {
+            metrics.AddConsoleExporter();               // print metrics to console for local dev
+        }
+    });
 
 var app = builder.Build();
 

@@ -37,7 +37,7 @@ public class PollsController : ControllerBase
     public async Task<IActionResult> CreatePoll([FromBody] CreatePollRequest request)
     {
         using var activity = DiagnosticsConfig.Source.StartActivity("CreatePoll");
-        activity?.SetTag("poll.title", request.Title);
+        activity?.SetTag("poll.titleLength", request.Title?.Length ?? 0);
         activity?.SetTag("poll.optionCount", request.Options.Count);
         activity?.SetTag("poll.type", request.PollType.ToString());
 
@@ -185,8 +185,8 @@ public class PollsController : ControllerBase
 
         await _voteRepository.CreateVoteAsync(vote, choices);
 
-        // Increment custom vote counter metric
-        DiagnosticsConfig.VoteCounter.Add(1, new KeyValuePair<string, object?>("poll.id", pollId.ToString()));
+        // Increment custom vote counter metric without per-poll attributes to avoid high-cardinality series
+        DiagnosticsConfig.VoteCounter.Add(1);
 
         // Broadcast updated results to all clients viewing this poll's results page
         var results = await _voteRepository.GetResultsAsync(pollId);
