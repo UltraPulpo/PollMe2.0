@@ -24,7 +24,7 @@ A portfolio-quality real-time polling app. Create single- or multiple-choice pol
 │  PollHub (SignalR — broadcasts ResultsUpdated)           │
 │                                                          │
 │  Dapper + SQLite (polls.db)    FluentMigrator (schema)   │
-│  OpenTelemetry → console traces & metrics (local dev)    │
+│  OpenTelemetry → console traces & metrics (planned)      │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -35,7 +35,7 @@ A portfolio-quality real-time polling app. Create single- or multiple-choice pol
 | Frontend  | React 19, TypeScript, Vite, React Router 7, Pico CSS (CDN) |
 | Backend   | ASP.NET Core 9 Web API, Dapper, FluentMigrator, SQLite |
 | Real-time | SignalR (ASP.NET Core + `@microsoft/signalr`)     |
-| Observability | OpenTelemetry (console exporter, local dev)   |
+| Observability | OpenTelemetry (planned — packages present, not yet wired) |
 | Tests     | xUnit + NSubstitute + FluentAssertions (backend), Jest + React Testing Library (frontend) |
 
 ## Prerequisites
@@ -98,10 +98,7 @@ Open **http://localhost:5173** in your browser.
 
 **Backend:**
 
-```bash
-cd backend/PollApp.Api.Tests
-dotnet test
-```
+Backend automated tests are not currently included in this repository. The `backend/PollApp.Api.Tests` project does not exist yet — backend tests are planned for a later phase.
 
 **Frontend:**
 
