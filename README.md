@@ -94,6 +94,23 @@ npm run dev
 
 Open **http://localhost:5173** in your browser.
 
+## Examples
+
+### Create a Poll
+<img width="536" height="583" alt="image" src="https://github.com/user-attachments/assets/131c6094-7f01-46a1-9f28-73124e075e62" />
+
+### Poll Created
+<img width="535" height="693" alt="image" src="https://github.com/user-attachments/assets/1824816c-3a2c-4df9-b48a-e4eb8f6bf529" />
+
+### Poll Voting
+<img width="536" height="341" alt="image" src="https://github.com/user-attachments/assets/7dbbb964-92b0-47db-8e6f-355064b0da4e" />
+
+### Poll Results
+<img width="531" height="442" alt="image" src="https://github.com/user-attachments/assets/d7a79471-2bc6-46d6-b982-d518666a99bb" />
+
+### Already Voted
+<img width="540" height="149" alt="image" src="https://github.com/user-attachments/assets/f523603a-9820-460b-9101-f2d693df2a9f" />
+
 ## Running Tests
 
 **Backend:**
