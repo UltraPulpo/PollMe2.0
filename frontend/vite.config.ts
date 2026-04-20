@@ -11,13 +11,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://localhost:5001',
-        secure: false,       // accept self-signed certs from ASP.NET Core dev server
+        target: 'http://localhost:5006',
         changeOrigin: true
       },
       '/hubs': {
-        target: 'https://localhost:5001',
-        secure: false,
+        target: 'http://localhost:5006',
         ws: true             // enable WebSocket proxying — required for SignalR
       }
     }
