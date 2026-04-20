@@ -226,17 +226,53 @@ Create `jest.config.ts` in the `frontend/` root:
 ```typescript
 /** @jest-config-loader ts-node */
 /** @jest-config-loader-options {"transpileOnly": true} */
-export default {
+import type { Config } from 'jest';
+
+const config: Config = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   moduleNameMapper: {
-    '\\.(css|less|scss)$': 'identity-obj-proxy'  // mock CSS imports
+    '\\.(css|less|scss)$': 'identity-obj-proxy',  // mock CSS imports
   },
-  setupFilesAfterEnv: ['@testing-library/jest-dom']
-}
+  // Polyfills required before any test module loads (e.g. TextEncoder for React Router v7)
+  setupFiles: ['<rootDir>/jest.setup.ts'],
+  setupFilesAfterEnv: ['@testing-library/jest-dom'],
+  transform: {
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          jsx: 'react-jsx',
+          module: 'CommonJS',
+          moduleResolution: 'node',
+          esModuleInterop: true,
+          allowSyntheticDefaultImports: true,
+          strict: true,
+          lib: ['es2020', 'dom', 'dom.iterable'],
+          types: ['jest', '@testing-library/jest-dom', 'node'],
+        },
+      },
+    ],
+  },
+};
+
+export default config;
 ```
 
 > **Note**: The `@jest-config-loader` docblocks are required because the Vite project uses `"type": "module"` in `package.json`. The correct Jest key is `setupFilesAfterEnv` (not `setupFilesAfterSetup`).
+
+> **Note**: The `transform` block is required because the Vite `tsconfig.app.json` uses `"module": "ESNext"`, `"moduleResolution": "bundler"`, and `"verbatimModuleSyntax": true` — all incompatible with Jest/CommonJS. Providing explicit tsconfig options via the ts-jest transform overrides those settings for the test environment.
+
+Create `jest.setup.ts` in the `frontend/` root (NOT inside `src/__tests__/`):
+```typescript
+// Polyfill TextEncoder/TextDecoder for React Router v7 in jsdom environment.
+// These are available in Node.js but not in older jsdom versions.
+import { TextEncoder, TextDecoder } from 'util';
+
+Object.assign(global, { TextEncoder, TextDecoder });
+```
+
+> **Important**: Place `jest.setup.ts` at `frontend/jest.setup.ts`, not inside `src/__tests__/`. Jest's default `testMatch` pattern picks up all files in `__tests__/` directories, which would cause the setup file to be treated as a test file and fail.
 
 Add to `package.json` scripts: `"test": "jest"`
 
@@ -1165,8 +1201,13 @@ cd PollApp.Api.Tests
 dotnet add reference ../PollApp.Api/PollApp.Api.csproj
 dotnet add package NSubstitute
 dotnet add package FluentAssertions
-dotnet add package Microsoft.AspNetCore.Mvc.Testing
+dotnet add package Microsoft.AspNetCore.Mvc.Testing --version 9.0.15
+dotnet add package Microsoft.Data.Sqlite
 ```
+
+> **Note**: `Microsoft.AspNetCore.Mvc.Testing` must be pinned to `9.0.15`. The latest (10.x) requires `net10.0`; since the API targets `net9.0`, omitting the version will install 10.x and fail.
+
+> **Note**: `Microsoft.Data.Sqlite` is required to call `SqliteConnection.ClearAllPools()` in `PollApiFactory.DisposeAsync`. Without it, `File.Delete` on the temp SQLite database file throws `IOException` because connections remain open in the connection pool after `base.DisposeAsync()` completes.
 
 #### 9.2 — xUnit ↔ NUnit cheat sheet
 

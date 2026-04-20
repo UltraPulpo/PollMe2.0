@@ -14,12 +14,12 @@ SqlMapper.AddTypeHandler(new GuidTypeHandler());
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-if (string.IsNullOrWhiteSpace(connectionString))
+// Warn early if no connection string is configured.
+// The fallback value is resolved lazily inside the Func below so that
+// integration tests can override it via ConfigureAppConfiguration without
+// race conditions against the startup-time local variable.
+if (string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("DefaultConnection")))
 {
-    // Fallback to a local SQLite database if no connection string is configured.
-    // This prevents unexpected crashes when running via CLI without appsettings.
-    connectionString = "Data Source=pollapp.db;Cache=Shared;";
     Console.WriteLine("Warning: Connection string 'DefaultConnection' not found. Using fallback SQLite database 'pollapp.db'.");
 }
 
@@ -42,11 +42,15 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Register FluentMigrator — scans this assembly for Migration classes
+// Register FluentMigrator — scans this assembly for Migration classes.
+// The connection string is resolved lazily from IConfiguration so that
+// integration tests can override it via ConfigureAppConfiguration.
 builder.Services.AddFluentMigratorCore()
     .ConfigureRunner(rb => rb
         .AddSQLite()
-        .WithGlobalConnectionString(connectionString)
+        .WithGlobalConnectionString(sp =>
+            sp.GetRequiredService<IConfiguration>().GetConnectionString("DefaultConnection")
+            ?? "Data Source=pollapp.db;Cache=Shared;")
         .ScanIn(typeof(Program).Assembly).For.Migrations())
     .AddLogging(lb => lb.AddFluentMigratorConsole());
 
@@ -116,3 +120,6 @@ app.MapControllers();
 app.MapHub<PollHub>("/hubs/poll");
 
 app.Run();
+
+// Required for WebApplicationFactory<Program> in integration tests
+public partial class Program { }
