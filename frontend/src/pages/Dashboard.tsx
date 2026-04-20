@@ -3,12 +3,14 @@ import { useParams, Link } from 'react-router-dom';
 import { getCreatorPolls, togglePollActive, deletePoll, ApiError } from '../api';
 import type { CreatorPollSummary } from '../types';
 import CopyLinkButton from '../components/CopyLinkButton';
+import { useError } from '../context/ErrorContext';
 
 export default function Dashboard() {
   const { secretToken } = useParams<{ secretToken: string }>();
   const [polls, setPolls] = useState<CreatorPollSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { setGlobalError } = useError();
 
   useEffect(() => {
     if (!secretToken) return;
@@ -19,7 +21,7 @@ export default function Dashboard() {
         if (err instanceof ApiError && err.status === 404) {
           setError('Dashboard not found. Check your link.');
         } else {
-          setError('Failed to load dashboard.');
+          setGlobalError('Failed to load dashboard. Please try again.');
         }
       })
       .finally(() => setLoading(false));
@@ -32,7 +34,7 @@ export default function Dashboard() {
         prev.map((p) => (p.id === pollId ? { ...p, isActive: updated.isActive } : p)),
       );
     } catch {
-      alert('Failed to toggle poll status.');
+      setGlobalError('Failed to toggle poll status. Please try again.');
     }
   };
 
@@ -42,7 +44,7 @@ export default function Dashboard() {
       await deletePoll(pollId);
       setPolls((prev) => prev.filter((p) => p.id !== pollId));
     } catch {
-      alert('Failed to delete poll.');
+      setGlobalError('Failed to delete poll. Please try again.');
     }
   };
 

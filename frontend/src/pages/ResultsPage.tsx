@@ -5,12 +5,14 @@ import type { PollResultsResponse } from '../types';
 import { useSignalR } from '../hooks/useSignalR';
 import ResultsBar from '../components/ResultsBar';
 import CopyLinkButton from '../components/CopyLinkButton';
+import { useError } from '../context/ErrorContext';
 
 export default function ResultsPage() {
   const { pollId } = useParams<{ pollId: string }>();
   const [results, setResults] = useState<PollResultsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { setGlobalError } = useError();
 
   useEffect(() => {
     if (!pollId) return;
@@ -21,7 +23,7 @@ export default function ResultsPage() {
         if (err instanceof ApiError && err.status === 404) {
           setError('Poll not found.');
         } else {
-          setError('Failed to load results.');
+          setGlobalError('Failed to load results. Please try again.');
         }
       })
       .finally(() => setLoading(false));

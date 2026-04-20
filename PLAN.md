@@ -1035,13 +1035,17 @@ app.Map("/error", (HttpContext context) =>
     Results.Problem(statusCode: 500, title: "Internal Server Error"));
 ```
 
+> **Note on 404 handling**: `return NotFound()` in controller actions produces an empty 404 body. The `AddProblemDetails()` + `UseStatusCodePages()` pipeline registered in Phase 4 automatically detects empty error responses and rewrites them with a ProblemDetails body via `IProblemDetailsService`. **Do not replace `return NotFound()` with `return Problem(statusCode: 404)` in controller actions** — the middleware handles it, and changing working controller code is unnecessary.
+
+> **Note on Phase 4 baseline**: Phase 4 already registered `builder.Services.AddProblemDetails()`, `app.UseExceptionHandler()` (no-arg form), and `app.UseStatusCodePages()`. Phase 7 upgrades the exception handler to the explicit `/error` route form. The `UseStatusCodePages()` call remains and is responsible for the 404/empty-body → ProblemDetails rewrite.
+
 #### 7.2 — Frontend error handling
 
 Add a simple error context/banner:
 - React context that stores the latest error message
 - Global error banner component that renders at the top of the page
-- API client sets the error context on non-specific failures
-- Individual pages handle specific codes (409, 404, 403) with inline messages
+- Pages use the error context (`setGlobalError`) for non-specific (unexpected) failures; this replaces any `alert()` calls in action handlers (e.g., Dashboard's `handleToggle`/`handleDelete`)
+- Individual pages handle specific codes (409, 404, 403) with inline messages using local state
 
 #### 7.3 — Readme
 
@@ -1057,7 +1061,7 @@ Root `README.md` with:
 
 - [ ] API returns ProblemDetails for 400, 401, 403, 404, 409, 500
 - [ ] Frontend shows appropriate error messages
-- [ ] `start.cmd` launches both processes
+- [ ] `start.cmd` (created in Phase 1) launches both backend and frontend — verify it still works; no changes needed in Phase 7
 - [ ] README instructions work from a clean clone
 
 ---
