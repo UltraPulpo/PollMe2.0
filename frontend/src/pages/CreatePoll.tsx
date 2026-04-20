@@ -4,6 +4,7 @@ import { createPoll, ApiError } from '../api';
 import type { PollType, CreatePollResponse } from '../types';
 import OptionsList from '../components/OptionsList';
 import CopyLinkButton from '../components/CopyLinkButton';
+import { useError } from '../context/ErrorContext';
 
 export default function CreatePoll() {
   const [title, setTitle] = useState('');
@@ -13,6 +14,7 @@ export default function CreatePoll() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<CreatePollResponse | null>(null);
+  const { setGlobalError } = useError();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -31,7 +33,7 @@ export default function CreatePoll() {
       if (err instanceof ApiError) {
         setError(`Error ${err.status}: ${err.message}`);
       } else {
-        setError('An unexpected error occurred.');
+        setGlobalError('An unexpected error occurred. Please try again.');
       }
     } finally {
       setSubmitting(false);

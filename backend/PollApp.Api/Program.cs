@@ -66,7 +66,9 @@ using (var scope = app.Services.CreateScope())
     runner.MigrateUp();
 }
 
-app.UseExceptionHandler();
+app.UseExceptionHandler("/error");
+app.Map("/error", (HttpContext context) =>
+    Results.Problem(statusCode: 500, title: "Internal Server Error"));
 app.UseStatusCodePages();
 
 app.UseCors();

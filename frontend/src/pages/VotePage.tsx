@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getPoll, submitVote, ApiError } from '../api';
 import type { PollResponse } from '../types';
+import { useError } from '../context/ErrorContext';
 
 export default function VotePage() {
   const { pollId } = useParams<{ pollId: string }>();
@@ -14,6 +15,7 @@ export default function VotePage() {
   const [error, setError] = useState('');
   const [alreadyVoted, setAlreadyVoted] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const { setGlobalError } = useError();
 
   useEffect(() => {
     if (!pollId) return;
@@ -24,7 +26,7 @@ export default function VotePage() {
         if (err instanceof ApiError && err.status === 404) {
           setNotFound(true);
         } else {
-          setError('Failed to load poll.');
+          setGlobalError('Failed to load poll. Please try again.');
         }
       })
       .finally(() => setLoading(false));
@@ -56,7 +58,7 @@ export default function VotePage() {
       } else if (err instanceof ApiError) {
         setError(`Error ${err.status}: ${err.message}`);
       } else {
-        setError('An unexpected error occurred.');
+        setGlobalError('An unexpected error occurred. Please try again.');
       }
     } finally {
       setSubmitting(false);
