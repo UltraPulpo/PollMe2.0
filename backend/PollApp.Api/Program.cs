@@ -14,13 +14,13 @@ SqlMapper.AddTypeHandler(new GuidTypeHandler());
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Warn early if no connection string is configured.
-// The fallback value is resolved lazily inside the Func below so that
-// integration tests can override it via ConfigureAppConfiguration without
-// race conditions against the startup-time local variable.
-if (string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("DefaultConnection")))
+// Ensure a shared fallback connection string is available to all consumers
+// of IConfiguration, not just FluentMigrator.
+var defaultConnection = builder.Configuration.GetConnectionString("DefaultConnection");
+var usingFallbackConnection = string.IsNullOrWhiteSpace(defaultConnection);
+if (usingFallbackConnection)
 {
-    Console.WriteLine("Warning: Connection string 'DefaultConnection' not found. Using fallback SQLite database 'pollapp.db'.");
+    builder.Configuration["ConnectionStrings:DefaultConnection"] = "Data Source=pollapp.db;Cache=Shared;";
 }
 
 builder.Services.AddControllers()
@@ -93,6 +93,11 @@ builder.Services.AddOpenTelemetry()
     });
 
 var app = builder.Build();
+
+if (usingFallbackConnection)
+{
+    app.Logger.LogWarning("Connection string 'DefaultConnection' not found. Using fallback SQLite database 'pollapp.db'.");
+}
 
 // Run all pending migrations automatically on startup
 using (var scope = app.Services.CreateScope())
