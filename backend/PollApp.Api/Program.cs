@@ -1,9 +1,12 @@
 using System.Text.Json.Serialization;
 using Dapper;
 using FluentMigrator.Runner;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using PollApp.Api.Hubs;
 using PollApp.Api.Repositories;
 using PollApp.Api.Services;
+using PollApp.Api.Telemetry;
 
 // Register Dapper type handler for Guid ↔ SQLite TEXT conversion
 SqlMapper.AddTypeHandler(new GuidTypeHandler());
@@ -56,6 +59,18 @@ builder.Services.AddScoped<ICreatorAuthService, CreatorAuthService>();
 
 // Register SignalR for real-time updates
 builder.Services.AddSignalR();
+
+// Configure OpenTelemetry tracing and metrics
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource(DiagnosticsConfig.ServiceName)   // listen to our custom ActivitySource
+        .AddAspNetCoreInstrumentation()             // auto-trace every HTTP request
+        .AddHttpClientInstrumentation()             // auto-trace outgoing HTTP calls (if any)
+        .AddConsoleExporter())                      // print traces to console for local dev
+    .WithMetrics(metrics => metrics
+        .AddMeter(DiagnosticsConfig.ServiceName)    // listen to our custom Meter
+        .AddAspNetCoreInstrumentation()             // auto-collect HTTP metrics
+        .AddConsoleExporter());                     // print metrics to console
 
 var app = builder.Build();
 

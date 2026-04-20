@@ -7,6 +7,7 @@ using PollApp.Api.Helpers;
 using PollApp.Api.Hubs;
 using PollApp.Api.Repositories;
 using PollApp.Api.Services;
+using PollApp.Api.Telemetry;
 
 namespace PollApp.Api.Controllers;
 
@@ -35,6 +36,11 @@ public class PollsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreatePoll([FromBody] CreatePollRequest request)
     {
+        using var activity = DiagnosticsConfig.Source.StartActivity("CreatePoll");
+        activity?.SetTag("poll.title", request.Title);
+        activity?.SetTag("poll.optionCount", request.Options.Count);
+        activity?.SetTag("poll.type", request.PollType.ToString());
+
         // Resolve existing creator from cookie, or create a new one
         var creator = await _creatorAuthService.GetCurrentCreatorAsync(HttpContext)
                       ?? await _creatorAuthService.CreateCreatorAsync(HttpContext);
@@ -103,6 +109,9 @@ public class PollsController : ControllerBase
     [HttpPost("{pollId}/vote")]
     public async Task<IActionResult> Vote(Guid pollId, [FromBody] VoteRequest request)
     {
+        using var activity = DiagnosticsConfig.Source.StartActivity("SubmitVote");
+        activity?.SetTag("poll.id", pollId.ToString());
+
         // Fetch poll with options
         var result = await _pollRepository.GetWithOptionsAsync(pollId);
         if (result is null)
@@ -175,6 +184,9 @@ public class PollsController : ControllerBase
         }).ToList();
 
         await _voteRepository.CreateVoteAsync(vote, choices);
+
+        // Increment custom vote counter metric
+        DiagnosticsConfig.VoteCounter.Add(1, new KeyValuePair<string, object?>("poll.id", pollId.ToString()));
 
         // Broadcast updated results to all clients viewing this poll's results page
         var results = await _voteRepository.GetResultsAsync(pollId);
